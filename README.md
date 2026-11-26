@@ -4,7 +4,7 @@ A small, reproducible benchmark comparing **chunking strategies for Arabic RAG**
 
 [![tests](https://github.com/alialrikabi313/arabic-rag-bench/actions/workflows/test.yml/badge.svg)](https://github.com/alialrikabi313/arabic-rag-bench/actions/workflows/test.yml)
 
-> **TL;DR** — On 442 questions over Arabic Wikipedia, **chunk size drives retrieval quality, not chunking strategy**. Semantic chunking gave no gain over fixed windows of the same size; paragraph chunks were best *and* cheapest (Hit@1 0.792, MRR 0.863).
+> **TL;DR** — On Arabic Wikipedia, **semantic chunking gave no gain over fixed windows of the same size, and paragraph chunks matched the best fixed size at lower cost** — both hold with two different question generators. The *size* effect (bigger chunks score higher) is significant with one generator (442 questions) but **not** with the second (514 questions); see [Robustness](#robustness-a-second-question-generator).
 
 <p align="center">
   <picture>
@@ -46,12 +46,32 @@ A chunk is a correct hit if it comes from the right article and contains the mid
 - Paragraph (0.792) and fixed-200 (0.771) overlap within their confidence intervals; paragraph is the cheapest (no overlap, no extra embedding pass).
 - An earlier 80-question run suggested semantic might be competitive; with 442 questions the gap to large chunks is clear. Small samples mislead.
 
+## Robustness: a second question generator
+
+A model judged on questions it wrote itself can look better than it is, and the choice of generator can change conclusions. So the same 300 articles, prompt and verbatim-quote filter were re-run with a different model family (`gemini-3.5-flash-lite`, 514 accepted questions; `03b_make_questions_gemini.py`), evaluated by the same code (`results_gemini.md`).
+
+Absolute scores drop (paragraph Hit@1 0.619 vs 0.792): the generators produce questions of different difficulty, so **absolute numbers are not comparable across benchmarks**. What matters is whether the method comparison survives. A paired bootstrap over shared questions (`05_paired.py`, [results_paired.md](results_paired.md)):
+
+| Question generator | A vs B | MRR(A) − MRR(B) | 95% paired CI |
+|---|---|---|---|
+| qwen3.8:27b | fixed-200 vs fixed-100 | +0.060 | +0.033 – +0.088 * |
+| qwen3.8:27b | paragraph vs fixed-200 | +0.010 | −0.014 – +0.034 |
+| qwen3.8:27b | semantic vs fixed-100 | +0.027 | −0.006 – +0.060 |
+| gemini-3.5-flash-lite | fixed-200 vs fixed-100 | +0.016 | −0.010 – +0.044 |
+| gemini-3.5-flash-lite | paragraph vs fixed-200 | +0.001 | −0.023 – +0.026 |
+| gemini-3.5-flash-lite | semantic vs fixed-100 | +0.002 | −0.027 – +0.032 |
+
+(`*` = interval excludes 0; more pairs in the file.)
+
+- **Robust:** paragraph ≈ fixed-200, and semantic ≈ size-matched fixed windows, under both generators.
+- **Not robust:** "bigger chunks are better". It is clear with the first generator and indistinguishable from zero with the second. I would not state it as a general result from this data.
+
 ## Limitations
 
 - **Retrieval only.** No answer-generation quality is measured; larger chunks may cost precision or tokens downstream.
 - **Wikipedia only**, and most random Arabic articles are short, which favours big chunks. Long, heterogeneous documents may behave differently.
 - **Untuned semantic splitter.** One setting (breakpoint percentile 20, 40–250 words) was tried, not searched.
-- **Questions are LLM-generated** (single local model); verbatim-quote validation removes hallucinated evidence but not generator bias.
+- **Questions are LLM-generated.** Two generators were used (see Robustness); verbatim-quote validation removes hallucinated evidence but not generator bias, and the two generators gave different absolute scores.
 - **Single embedding model** here (see [arabic-embed-bench](https://github.com/alialrikabi313/arabic-embed-bench) for model comparison).
 - The sample is random and Wikipedia text changes over time; article IDs are in `sample_pageids.txt`, so re-fetching reproduces the selection but not byte-identical text.
 

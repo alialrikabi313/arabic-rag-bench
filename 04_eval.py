@@ -7,8 +7,10 @@
 على كل المقاطع ← قياس موضع أول مقطع صحيح.
 """
 
+import argparse
 import json
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -42,15 +44,20 @@ def evidence_window(quote: str) -> str:
 
 
 def main() -> None:
-    if not QUESTIONS_JSONL.exists():
-        sys.exit(f"لا توجد أسئلة: شغّل 03_make_questions.py أولاً ({QUESTIONS_JSONL})")
+    ap = argparse.ArgumentParser()
+    # مولّد أسئلة آخر (03b) يعطي نفس الصيغة؛ يُقيَّم بنفس الشيفرة وبملف نتائج منفصل
+    ap.add_argument("--questions", type=Path, default=QUESTIONS_JSONL)
+    ap.add_argument("--out", type=Path, default=RESULTS_MD)
+    args = ap.parse_args()
+    if not args.questions.exists():
+        sys.exit(f"لا توجد أسئلة: شغّل 03_make_questions.py أولاً ({args.questions})")
 
     from sentence_transformers import SentenceTransformer
 
     print(f"◄ تحميل النموذج {EMBED_MODEL} …")
     model = SentenceTransformer(EMBED_MODEL, device=EMBED_DEVICE)
 
-    with QUESTIONS_JSONL.open(encoding="utf-8") as f:
+    with args.questions.open(encoding="utf-8") as f:
         questions = [json.loads(line) for line in f]
     wanted = {q["pageid"] for q in questions}
     with SAMPLE_JSONL.open(encoding="utf-8") as f:
@@ -61,6 +68,7 @@ def main() -> None:
     )
 
     results = []
+    ranks_by_method: dict[str, dict[int, int]] = {}  # للاختبار المقترن لاحقاً
     methods = [f"fixed-{n}" for n in FIXED_SIZE_SWEEP] + ["paragraph", "semantic"]
     rng = np.random.default_rng(0)
     for method in methods:
@@ -87,6 +95,7 @@ def main() -> None:
         order = np.argsort(-(q_vecs @ c_vecs.T), axis=1)
 
         firsts: list[int] = []
+        ranks_by_method[method] = {}
         for qi, q in enumerate(questions):
             window = evidence_window(q["quote"])
             relevant = np.array(
@@ -96,6 +105,7 @@ def main() -> None:
                 continue
             ranks = np.nonzero(relevant[order[qi]])[0]
             firsts.append(int(ranks[0]) + 1)
+            ranks_by_method[method][qi] = int(ranks[0]) + 1
 
         first_arr = np.array(firsts)
         scored = len(first_arr)
@@ -132,8 +142,9 @@ def main() -> None:
             f"| {r['hit1_ci'][0]:.2f}–{r['hit1_ci'][1]:.2f} | {r['mrr']:.3f} "
             f"| {r['mrr_ci'][0]:.2f}–{r['mrr_ci'][1]:.2f} |"
         )
-    RESULTS_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"✓ {RESULTS_MD}")
+    args.out.with_suffix(".ranks.json").write_text(json.dumps(ranks_by_method), encoding="utf-8")
+    args.out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"✓ {args.out}")
 
 
 if __name__ == "__main__":
