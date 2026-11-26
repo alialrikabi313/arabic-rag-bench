@@ -72,4 +72,4 @@ All tunables are in `config.py`; engineering decisions and rejected alternatives
 
 ## Data & attribution
 
-Article text comes from Arabic Wikipedia (CC BY-SA 4.0); no article text is stored in this repository.
+Article text comes from Arabic Wikipedia (CC BY-SA 4.0); the repository contains only two short excerpts used as test fixtures (see `tests/data/ATTRIBUTION.md`).

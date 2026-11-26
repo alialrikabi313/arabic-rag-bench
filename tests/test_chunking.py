@@ -1,29 +1,26 @@
 # -*- coding: utf-8 -*-
 """اختبارات التقطيع. كل حالة صادفناها فعلاً في عيّنة ويكيبيديا (المرحلتان 1 و2)."""
 
-import json
 import sys
 from pathlib import Path
 
 import numpy as np
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from chunking import fixed_chunks, is_list_article, paragraph_chunks, semantic_chunks, split_sentences
-from config import MAX_CHUNK_WORDS, SAMPLE_JSONL
+from config import MAX_CHUNK_WORDS
+
+
+_DATA = Path(__file__).resolve().parent / "data"
+_FILES = {
+    "وفيات 2014": "wiki_obituaries_2014.txt",
+    "ثقافة الاغتصاب": "wiki_rape_culture_excerpt.txt",
+}
 
 
 def _article(title: str) -> str:
-    # النصوص الخام خارج الريبو؛ بدون العيّنة المحلية تُتخطّى الاختبارات
-    if not SAMPLE_JSONL.exists():
-        pytest.skip("عيّنة ويكيبيديا غير موجودة (شغّل 01_fetch_sample.py)")
-    with SAMPLE_JSONL.open(encoding="utf-8") as f:
-        for line in f:
-            row = json.loads(line)
-            if row["title"] == title:
-                return row["text"]
-    pytest.skip(f"المقالة غير موجودة في العيّنة المحلية: {title}")
+    # مقتطفات حقيقية مرفقة بالريبو (انظر tests/data/ATTRIBUTION.md) كي تعمل الاختبارات في أي بيئة
+    return (_DATA / _FILES[title]).read_text(encoding="utf-8")
 
 
 def test_obituary_list_article_is_flagged():
@@ -36,15 +33,16 @@ def test_prose_article_is_not_flagged():
     assert not is_list_article(split_sentences(_article("ثقافة الاغتصاب")))
 
 
-def test_long_sentences_never_exceed_cap():
-    # كانت هذه المقالة تنتج مقاطع حتى 340 كلمة لأن السقف يُفحص بعد إضافة الجملة
+def test_multi_sentence_chunks_never_exceed_cap():
+    # كان السقف يُفحص بعد إضافة الجملة فينتج هذا المقتطف مقطعاً من 356 كلمة (حتى 340 في المقالة كاملة).
+    # الجملة الواحدة الأطول من السقف تبقى مقطعاً مستقلاً؛ أي مقطع متعدد الجمل يجب ألا يتجاوزه
     sents = split_sentences(_article("ثقافة الاغتصاب"))
     rng = np.random.default_rng(0)
     vecs = rng.normal(size=(len(sents), 8))
     vecs /= np.linalg.norm(vecs, axis=1, keepdims=True)
-    longest_single = max(len(s.split()) for s in sents)
     for chunk in semantic_chunks(sents, vecs):
-        assert len(chunk.split()) <= max(MAX_CHUNK_WORDS, longest_single)
+        is_single_sentence = chunk in sents
+        assert is_single_sentence or len(chunk.split()) <= MAX_CHUNK_WORDS
 
 
 def test_headings_are_not_chunk_text():
