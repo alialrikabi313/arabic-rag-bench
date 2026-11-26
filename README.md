@@ -61,7 +61,7 @@ Absolute scores drop (paragraph Hit@1 0.619 vs 0.792): the generators produce qu
 | gemini-3.5-flash-lite | paragraph vs fixed-200 | +0.001 | −0.023 – +0.026 |
 | gemini-3.5-flash-lite | semantic vs fixed-100 | +0.002 | −0.027 – +0.032 |
 
-(`*` = interval excludes 0; more pairs in the file.)
+(`*` = interval excludes 0; more pairs in the file.) Short write-up: [docs/report.md](docs/report.md).
 
 - **Robust:** paragraph ≈ fixed-200, and semantic ≈ size-matched fixed windows, under both generators.
 - **Not robust:** "bigger chunks are better". It is clear with the first generator and indistinguishable from zero with the second. I would not state it as a general result from this data.
