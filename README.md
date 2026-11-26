@@ -2,7 +2,16 @@
 
 A small, reproducible benchmark comparing **chunking strategies for Arabic RAG** on Arabic Wikipedia, using `BAAI/bge-m3` embeddings and LLM-generated questions whose evidence is a verbatim quote (so every chunker is judged against the same ground truth).
 
-> **Headline:** on Arabic Wikipedia, **chunk size matters more than chunking strategy**. Semantic chunking did not beat fixed windows of a similar size, and larger chunks (~200 words) beat smaller ones. Paragraph chunking is the best *and* the cheapest option here.
+[![tests](https://github.com/alialrikabi313/arabic-rag-bench/actions/workflows/test.yml/badge.svg)](https://github.com/alialrikabi313/arabic-rag-bench/actions/workflows/test.yml)
+
+> **TL;DR** — On 442 questions over Arabic Wikipedia, **chunk size drives retrieval quality, not chunking strategy**. Semantic chunking gave no gain over fixed windows of the same size; paragraph chunks were best *and* cheapest (Hit@1 0.792, MRR 0.863).
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/size-vs-hit1-dark.png">
+    <img src="docs/size-vs-hit1-light.png" alt="Hit@1 versus median chunk size: semantic chunks fall on the fixed-window trend" width="760">
+  </picture>
+</p>
 
 ## Why
 
