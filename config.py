@@ -70,6 +70,11 @@ LLM_MODEL = "qwen3.8:27b"
 QUESTIONS_PER_ARTICLE = 2
 QUESTIONS_JSONL = DATA_DIR / "questions.jsonl"
 
+# مولّد ثانٍ من عائلة مختلفة: نموذج يقيَّم على أسئلة ولّدها هو يُنتج تحيّزاً ذاتياً.
+# flash-lite الأرخص (2.5-lite لم يعد متاحاً للمفاتيح الجديدة: 404)؛ المفتاح من متغير البيئة GEMINI_API_KEY ولا يُكتب في الريبو
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+GEMINI_QUESTIONS_JSONL = DATA_DIR / "questions_gemini.jsonl"
+
 # المقالة الأطول تُقتطع قبل إرسالها كي لا يتجاوز السياق؛ الأسئلة تُولَّد من هذا الجزء فقط
 LLM_MAX_ARTICLE_WORDS = 1500
 
